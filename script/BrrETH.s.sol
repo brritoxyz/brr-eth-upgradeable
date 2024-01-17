@@ -12,8 +12,9 @@ contract BrrETHScript is Script {
     function run() public {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        BrrETH brrETH = new BrrETH(vm.envAddress("OWNER"));
+        BrrETH brrETH = new BrrETH();
 
+        brrETH.initialize(vm.envAddress("OWNER"));
         brrETH.deposit{value: _INITIAL_DEPOSIT_AMOUNT}(_BURN_ADDRESS, 1);
 
         vm.stopBroadcast();

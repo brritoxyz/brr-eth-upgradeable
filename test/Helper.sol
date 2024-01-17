@@ -2,12 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {BrrETH} from "src/BrrETH.sol";
 
 contract Helper is Test {
     address public immutable owner = address(this);
-    BrrETH public immutable vault = new BrrETH(address(this));
+    BrrETH public immutable vault = new BrrETH();
     string internal constant _NAME = "Brrito ETH";
     string internal constant _SYMBOL = "brrETH";
     address internal constant _WETH =
@@ -23,4 +24,16 @@ contract Helper is Test {
     uint256 internal constant _FEE_BASE = 10_000;
     uint256 internal constant _SWAP_FEE_DEDUCTED = 9_998;
     uint256 internal constant _COMET_ROUNDING_ERROR_MARGIN = 2;
+
+    constructor() {
+        vm.expectEmit(true, true, true, true, address(vault));
+
+        emit Initializable.Initialized(1);
+
+        vault.initialize(address(this));
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+
+        vault.initialize(address(this));
+    }
 }

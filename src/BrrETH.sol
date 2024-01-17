@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ERC4626} from "solady/tokens/ERC4626.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
@@ -13,7 +14,7 @@ import {IWETH} from "src/interfaces/IWETH.sol";
 /// @title Brrito brrETH.
 /// @author kp (kphed.eth).
 /// @notice A yield-bearing ETH derivative built on Compound III.
-contract BrrETH is Ownable, ERC4626 {
+contract BrrETH is Initializable, Ownable, ERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
@@ -61,7 +62,12 @@ contract BrrETH is Ownable, ERC4626 {
     error RemovedOwnableMethod();
     error RemovedERC4626Method();
 
-    constructor(address initialOwner) {
+    constructor() {
+        // TODO: Uncomment once upgradeability is fully implemented.
+        // _disableInitializers();
+    }
+
+    function initialize(address initialOwner) external initializer {
         // The default fee recipients are set to the initial owner but
         // can be updated using one of the setter methods.
         protocolFeeReceiver = initialOwner;
@@ -336,8 +342,13 @@ contract BrrETH is Ownable, ERC4626 {
     }
 
     /*//////////////////////////////////////////////////////////////
-                    ENFORCE 2-STEP OWNERSHIP TRANSFERS
+                    OVERRIDDEN OWNABLE METHODS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Prevent double initialization.
+    function _guardInitializeOwner() internal pure override returns (bool) {
+        return true;
+    }
 
     function transferOwnership(address) public payable override {
         revert RemovedOwnableMethod();
