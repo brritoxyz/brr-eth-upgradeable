@@ -26,14 +26,6 @@ contract Helper is Test {
     uint256 internal constant _COMET_ROUNDING_ERROR_MARGIN = 2;
 
     constructor() {
-        vm.expectEmit(true, true, true, true, address(vault));
-
-        emit Initializable.Initialized(1);
-
-        vault.initialize(address(this));
-
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-
         vault.initialize(address(this));
     }
 }

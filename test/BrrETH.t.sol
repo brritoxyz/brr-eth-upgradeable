@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
@@ -71,14 +72,31 @@ contract BrrETHTest is Helper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                             constructor
+                             initialize
     //////////////////////////////////////////////////////////////*/
 
-    function testConstructor() external {
-        // The initial `feeDistributor` is set to the owner to avoid zero address transfers.
-        assertEq(owner, vault.feeDistributor());
+    function testCannotInitializeInvalidInitialization() external {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
 
-        assertEq(owner, vault.owner());
+        vault.initialize(address(this));
+    }
+
+    function testInitialize() external {
+        BrrETH uninitializedVault = new BrrETH();
+
+        assertEq(address(0), uninitializedVault.protocolFeeReceiver());
+        assertEq(address(0), uninitializedVault.feeDistributor());
+        assertEq(address(0), uninitializedVault.owner());
+
+        vm.expectEmit(true, true, true, true, address(uninitializedVault));
+
+        emit Initializable.Initialized(1);
+
+        uninitializedVault.initialize(address(this));
+
+        assertEq(owner, uninitializedVault.protocolFeeReceiver());
+        assertEq(owner, uninitializedVault.feeDistributor());
+        assertEq(owner, uninitializedVault.owner());
 
         // Comet must have max allowance for the purposes of supplying WETH for cWETHv3.
         assertEq(
