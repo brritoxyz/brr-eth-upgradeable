@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {ERC4626} from "solady/tokens/ERC4626.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 import {IComet} from "src/interfaces/IComet.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
 import {IRouter} from "src/interfaces/IRouter.sol";
@@ -14,7 +16,7 @@ import {IWETH} from "src/interfaces/IWETH.sol";
 /// @title Brrito brrETH.
 /// @author kp (kphed.eth).
 /// @notice A yield-bearing ETH derivative built on Compound III.
-contract BrrETH is Initializable, Ownable, ERC4626 {
+contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
@@ -24,21 +26,22 @@ contract BrrETH is Initializable, Ownable, ERC4626 {
     uint256 private constant _FEE_BASE = 10_000;
     address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
+    ERC1967Factory private constant _ERC1967_FACTORY =
+        ERC1967Factory(0x0000000000006396FF2a80c067f99B3d2Ab4Df24);
 
-    ICometRewards public cometRewards =
-        ICometRewards(0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1);
+    ICometRewards public cometRewards;
 
     // The router used to swap rewards for WETH.
-    IRouter public router = IRouter(0xafaE5a94e6F1C79D40F5460c47589BAD5c123B9c);
+    IRouter public router;
 
-    // The default reward fee is 5% (500 / 10_000).
-    uint256 public rewardFee = 500;
+    // The default reward fee is 0% and can be increased up to 100% (unlikely to ever be that high).
+    uint256 public rewardFee;
 
     // Receives the protocol's share of reward fees.
-    address public protocolFeeReceiver = address(0);
+    address public protocolFeeReceiver;
 
     // Receives and distributes the stakedBRR token holder's share of reward fees.
-    address public feeDistributor = address(0);
+    address public feeDistributor;
 
     event Harvest(
         address indexed token,
@@ -63,17 +66,30 @@ contract BrrETH is Initializable, Ownable, ERC4626 {
     error RemovedERC4626Method();
 
     constructor() {
-        // TODO: Uncomment once upgradeability is fully implemented.
-        // _disableInitializers();
+        _disableInitializers();
     }
 
-    function initialize(address initialOwner) external initializer {
-        // The default fee recipients are set to the initial owner but
-        // can be updated using one of the setter methods.
-        protocolFeeReceiver = initialOwner;
-        feeDistributor = initialOwner;
+    modifier onlyAdmin() {
+        if (msg.sender != _ERC1967_FACTORY.adminOf(address(this)))
+            revert ERC1967Factory.Unauthorized();
+        _;
+    }
 
-        _initializeOwner(initialOwner);
+    function initialize(
+        address _owner,
+        address _cometRewards,
+        address _router,
+        uint256 _rewardFee,
+        address _protocolFeeReceiver,
+        address _feeDistributor
+    ) external initializer {
+        _initializeOwner(_owner);
+
+        cometRewards = ICometRewards(_cometRewards);
+        router = IRouter(_router);
+        rewardFee = _rewardFee;
+        protocolFeeReceiver = _protocolFeeReceiver;
+        feeDistributor = _feeDistributor;
 
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
             .rewardConfig(_COMET);
@@ -340,6 +356,12 @@ contract BrrETH is Initializable, Ownable, ERC4626 {
 
         emit SetFeeDistributor(_feeDistributor);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                    OVERRIDDEN UUPSUpgradeable METHODS
+    //////////////////////////////////////////////////////////////*/
+
+    function _authorizeUpgrade(address) internal view override onlyAdmin {}
 
     /*//////////////////////////////////////////////////////////////
                     OVERRIDDEN OWNABLE METHODS

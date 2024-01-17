@@ -78,12 +78,26 @@ contract BrrETHTest is Helper {
     function testCannotInitializeInvalidInitialization() external {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
 
-        vault.initialize(address(this));
+        vault.initialize(
+            owner,
+            _COMET_REWARDS,
+            _ROUTER,
+            _INITIAL_REWARD_FEE,
+            owner,
+            owner
+        );
     }
 
     function testInitialize() external {
-        BrrETH uninitializedVault = new BrrETH();
+        BrrETH uninitializedVault = BrrETH(
+            // Deploys a new proxy but does not initialize.
+            _ERC1967_FACTORY.deploy(vaultImplementation, admin)
+        );
 
+        assertEq(address(0), uninitializedVault.owner());
+        assertEq(address(0), address(uninitializedVault.cometRewards()));
+        assertEq(address(0), address(uninitializedVault.router()));
+        assertEq(0, uninitializedVault.rewardFee());
         assertEq(address(0), uninitializedVault.protocolFeeReceiver());
         assertEq(address(0), uninitializedVault.feeDistributor());
         assertEq(address(0), uninitializedVault.owner());
@@ -92,8 +106,19 @@ contract BrrETHTest is Helper {
 
         emit Initializable.Initialized(1);
 
-        uninitializedVault.initialize(address(this));
+        uninitializedVault.initialize(
+            owner,
+            _COMET_REWARDS,
+            _ROUTER,
+            _INITIAL_REWARD_FEE,
+            owner,
+            owner
+        );
 
+            assertEq(owner, uninitializedVault.owner());
+        assertEq(_COMET_REWARDS, address(uninitializedVault.cometRewards()));
+        assertEq(_ROUTER, address(uninitializedVault.router()));
+        assertEq(_INITIAL_REWARD_FEE, uninitializedVault.rewardFee());
         assertEq(owner, uninitializedVault.protocolFeeReceiver());
         assertEq(owner, uninitializedVault.feeDistributor());
         assertEq(owner, uninitializedVault.owner());
@@ -643,8 +668,9 @@ contract BrrETHTest is Helper {
     }
 
     function testSetRouter() external {
-        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
-            .rewardConfig(_COMET);
+        ICometRewards.RewardConfig memory rewardConfig = ICometRewards(
+            _COMET_REWARDS
+        ).rewardConfig(_COMET);
         ERC20 rewardToken = ERC20(rewardConfig.token);
         address router = address(0xbeef);
 
@@ -672,8 +698,9 @@ contract BrrETHTest is Helper {
     function testSetRouterFuzz(address router) external {
         vm.assume(router != address(0) && router != _ROUTER);
 
-        ICometRewards.RewardConfig memory rewardConfig = _COMET_REWARDS
-            .rewardConfig(_COMET);
+        ICometRewards.RewardConfig memory rewardConfig = ICometRewards(
+            _COMET_REWARDS
+        ).rewardConfig(_COMET);
         ERC20 rewardToken = ERC20(rewardConfig.token);
 
         assertEq(0, rewardToken.allowance(address(vault), router));
