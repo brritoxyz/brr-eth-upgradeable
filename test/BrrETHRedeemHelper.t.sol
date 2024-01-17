@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {BrrETHRedeemHelper} from "src/BrrETHRedeemHelper.sol";
 import {Helper} from "test/Helper.sol";
 
-contract BrrETHRedeemHelperTest is Test, Helper {
+contract BrrETHRedeemHelperTest is Helper {
     using SafeTransferLib for address;
 
     address public constant COMET = 0x46e6b214b524310239732D51387075E0e70970bf;
