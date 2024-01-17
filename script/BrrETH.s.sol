@@ -17,25 +17,23 @@ contract BrrETHScript is Script {
     address private constant _COMET_REWARDS =
         0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1;
     uint256 private constant _INITIAL_REWARD_FEE = 1_000;
-    uint256 private constant _INITIAL_DEPOSIT_AMOUNT = 0.001 ether;
+    uint256 private constant _INITIAL_DEPOSIT_AMOUNT = 0.01 ether;
 
     function run() public {
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
 
-        address implementation = address(new BrrETH());
-        address owner = vm.envAddress("OWNER");
+        address admin = vm.envAddress("OWNER");
         BrrETH brrETH = BrrETH(
             _ERC1967_FACTORY.deployAndCall(
-                implementation,
-                owner,
+                address(new BrrETH()),
+                admin,
                 abi.encodeWithSelector(
                     BrrETH.initialize.selector,
-                    owner,
                     _COMET_REWARDS,
                     _ROUTER,
                     _INITIAL_REWARD_FEE,
-                    owner,
-                    owner
+                    admin,
+                    admin
                 )
             )
         );
