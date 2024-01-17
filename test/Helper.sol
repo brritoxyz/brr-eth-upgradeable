@@ -27,7 +27,6 @@ contract Helper is Test {
     uint256 internal constant _COMET_ROUNDING_ERROR_MARGIN = 2;
     uint256 internal constant _INITIAL_REWARD_FEE = 1_000;
     address public immutable admin = address(this);
-    address public immutable owner = address(this);
     address public immutable vaultImplementation = address(new BrrETH());
     BrrETH public immutable vault;
 
@@ -38,14 +37,21 @@ contract Helper is Test {
                 admin,
                 abi.encodeWithSelector(
                     BrrETH.initialize.selector,
-                    owner,
                     _COMET_REWARDS,
                     _ROUTER,
                     _INITIAL_REWARD_FEE,
-                    owner,
-                    owner
+                    admin,
+                    admin
                 )
             )
         );
+    }
+
+    /**
+     * @notice Convenient helper for getting the vault (ERC1967 proxy) admin.
+     * @return address  Proxy admin.
+     */
+    function _getVaultProxyAdmin() internal view returns (address) {
+        return _ERC1967_FACTORY.adminOf(address(vault));
     }
 }

@@ -5,7 +5,6 @@ import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UUPSUpgradeable} from "solady/utils/UUPSUpgradeable.sol";
 import {IComet} from "src/interfaces/IComet.sol";
@@ -16,7 +15,7 @@ import {IWETH} from "src/interfaces/IWETH.sol";
 /// @title Brrito brrETH.
 /// @author kp (kphed.eth).
 /// @notice A yield-bearing ETH derivative built on Compound III.
-contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
+contract BrrETH is UUPSUpgradeable, Initializable, ERC4626 {
     using SafeTransferLib for address;
     using FixedPointMathLib for uint256;
 
@@ -62,7 +61,6 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
     error InvalidRewardFee();
     error InvalidProtocolFeeReceiver();
     error InvalidFeeDistributor();
-    error RemovedOwnableMethod();
     error RemovedERC4626Method();
 
     constructor() {
@@ -72,25 +70,22 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
     modifier onlyAdmin() {
         if (msg.sender != _ERC1967_FACTORY.adminOf(address(this)))
             revert ERC1967Factory.Unauthorized();
+
         _;
     }
 
     function initialize(
-        address _owner,
         address _cometRewards,
         address _router,
         uint256 _rewardFee,
         address _protocolFeeReceiver,
         address _feeDistributor
     ) external initializer {
-        _initializeOwner(_owner);
-
         cometRewards = ICometRewards(_cometRewards);
         router = IRouter(_router);
         rewardFee = _rewardFee;
         protocolFeeReceiver = _protocolFeeReceiver;
         feeDistributor = _feeDistributor;
-
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
             .rewardConfig(_COMET);
 
@@ -288,7 +283,7 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
     function setCometRewards(
         address _cometRewards,
         bool shouldHarvest
-    ) external onlyOwner {
+    ) external onlyAdmin {
         if (_cometRewards == address(0)) revert InvalidCometRewards();
         if (shouldHarvest) harvest();
 
@@ -301,7 +296,7 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
      * @notice Set the router contract.
      * @param  _router  address  Router contract address.
      */
-    function setRouter(address _router) external onlyOwner {
+    function setRouter(address _router) external onlyAdmin {
         if (_router == address(0)) revert InvalidRouter();
 
         ICometRewards.RewardConfig memory rewardConfig = cometRewards
@@ -322,7 +317,7 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
      * @notice Set the reward fee.
      * @param  _rewardFee  uint256  Reward fee.
      */
-    function setRewardFee(uint256 _rewardFee) external onlyOwner {
+    function setRewardFee(uint256 _rewardFee) external onlyAdmin {
         if (_rewardFee > _FEE_BASE) revert InvalidRewardFee();
 
         rewardFee = _rewardFee;
@@ -336,7 +331,7 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
      */
     function setProtocolFeeReceiver(
         address _protocolFeeReceiver
-    ) external onlyOwner {
+    ) external onlyAdmin {
         if (_protocolFeeReceiver == address(0))
             revert InvalidProtocolFeeReceiver();
 
@@ -349,7 +344,7 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
      * @notice Set the fee distributor.
      * @param  _feeDistributor  address  Fee distributor.
      */
-    function setFeeDistributor(address _feeDistributor) external onlyOwner {
+    function setFeeDistributor(address _feeDistributor) external onlyAdmin {
         if (_feeDistributor == address(0)) revert InvalidFeeDistributor();
 
         feeDistributor = _feeDistributor;
@@ -362,23 +357,6 @@ contract BrrETH is UUPSUpgradeable, Initializable, Ownable, ERC4626 {
     //////////////////////////////////////////////////////////////*/
 
     function _authorizeUpgrade(address) internal view override onlyAdmin {}
-
-    /*//////////////////////////////////////////////////////////////
-                    OVERRIDDEN OWNABLE METHODS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @notice Prevent double initialization.
-    function _guardInitializeOwner() internal pure override returns (bool) {
-        return true;
-    }
-
-    function transferOwnership(address) public payable override {
-        revert RemovedOwnableMethod();
-    }
-
-    function renounceOwnership() public payable override {
-        revert RemovedOwnableMethod();
-    }
 
     /*//////////////////////////////////////////////////////////////
                         REMOVED ERC4626 METHODS

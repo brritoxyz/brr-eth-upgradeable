@@ -2,12 +2,12 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 import {ERC4626} from "solady/tokens/ERC4626.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {Helper} from "test/Helper.sol";
 import {BrrETH} from "src/BrrETH.sol";
 import {IComet} from "src/interfaces/IComet.sol";
@@ -79,12 +79,11 @@ contract BrrETHTest is Helper {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
 
         vault.initialize(
-            owner,
             _COMET_REWARDS,
             _ROUTER,
             _INITIAL_REWARD_FEE,
-            owner,
-            owner
+            admin,
+            admin
         );
     }
 
@@ -94,34 +93,29 @@ contract BrrETHTest is Helper {
             _ERC1967_FACTORY.deploy(vaultImplementation, admin)
         );
 
-        assertEq(address(0), uninitializedVault.owner());
         assertEq(address(0), address(uninitializedVault.cometRewards()));
         assertEq(address(0), address(uninitializedVault.router()));
         assertEq(0, uninitializedVault.rewardFee());
         assertEq(address(0), uninitializedVault.protocolFeeReceiver());
         assertEq(address(0), uninitializedVault.feeDistributor());
-        assertEq(address(0), uninitializedVault.owner());
 
         vm.expectEmit(true, true, true, true, address(uninitializedVault));
 
         emit Initializable.Initialized(1);
 
         uninitializedVault.initialize(
-            owner,
             _COMET_REWARDS,
             _ROUTER,
             _INITIAL_REWARD_FEE,
-            owner,
-            owner
+            admin,
+            admin
         );
 
-            assertEq(owner, uninitializedVault.owner());
         assertEq(_COMET_REWARDS, address(uninitializedVault.cometRewards()));
         assertEq(_ROUTER, address(uninitializedVault.router()));
         assertEq(_INITIAL_REWARD_FEE, uninitializedVault.rewardFee());
-        assertEq(owner, uninitializedVault.protocolFeeReceiver());
-        assertEq(owner, uninitializedVault.feeDistributor());
-        assertEq(owner, uninitializedVault.owner());
+        assertEq(admin, uninitializedVault.protocolFeeReceiver());
+        assertEq(admin, uninitializedVault.feeDistributor());
 
         // Comet must have max allowance for the purposes of supplying WETH for cWETHv3.
         assertEq(
@@ -462,7 +456,7 @@ contract BrrETHTest is Helper {
                 protocolFeeReceiverShare +
                 feeDistributorShare +
                 feeDistributorSwapFeeShare,
-            _WETH.balanceOf(vault.owner())
+            _WETH.balanceOf(_getVaultProxyAdmin())
         );
     }
 
@@ -525,18 +519,18 @@ contract BrrETHTest is Helper {
         assertLe(totalAssets + newAssets, vault.totalAssets());
         assertEq(totalSupply, vault.totalSupply());
 
-        if (vault.owner() == vault.feeDistributor()) {
+        if (_getVaultProxyAdmin() == vault.feeDistributor()) {
             assertEq(
                 protocolFeeReceiverBalance +
                     protocolFeeReceiverShare +
                     feeDistributorShare +
                     feeDistributorSwapFeeShare,
-                _WETH.balanceOf(vault.owner())
+                _WETH.balanceOf(_getVaultProxyAdmin())
             );
         } else {
             assertEq(
                 protocolFeeReceiverBalance + protocolFeeReceiverShare,
-                _WETH.balanceOf(vault.owner())
+                _WETH.balanceOf(_getVaultProxyAdmin())
             );
             assertEq(
                 feeDistributorBalance +
@@ -556,10 +550,10 @@ contract BrrETHTest is Helper {
         address cometRewards = address(0xbeef);
         bool shouldHarvest = false;
 
-        assertTrue(msgSender != vault.owner());
+        assertTrue(msgSender != _getVaultProxyAdmin());
 
         vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.expectRevert(ERC1967Factory.Unauthorized.selector);
 
         vault.setCometRewards(cometRewards, shouldHarvest);
     }
@@ -651,10 +645,10 @@ contract BrrETHTest is Helper {
         address msgSender = address(0);
         address router = address(0xbeef);
 
-        assertTrue(msgSender != vault.owner());
+        assertTrue(msgSender != _getVaultProxyAdmin());
 
         vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.expectRevert(ERC1967Factory.Unauthorized.selector);
 
         vault.setRouter(router);
     }
@@ -726,10 +720,10 @@ contract BrrETHTest is Helper {
         address msgSender = address(0);
         uint256 rewardFee = 0;
 
-        assertTrue(msgSender != vault.owner());
+        assertTrue(msgSender != _getVaultProxyAdmin());
 
         vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.expectRevert(ERC1967Factory.Unauthorized.selector);
 
         vault.setRewardFee(rewardFee);
     }
@@ -784,10 +778,10 @@ contract BrrETHTest is Helper {
         address msgSender = address(0);
         address protocolFeeReceiver = address(0xbeef);
 
-        assertTrue(msgSender != vault.owner());
+        assertTrue(msgSender != _getVaultProxyAdmin());
 
         vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.expectRevert(ERC1967Factory.Unauthorized.selector);
 
         vault.setProtocolFeeReceiver(protocolFeeReceiver);
     }
@@ -795,7 +789,7 @@ contract BrrETHTest is Helper {
     function testCannotSetProtocolFeeReceiverInvalidProtocolFeeReceiver()
         external
     {
-        address msgSender = vault.owner();
+        address msgSender = _getVaultProxyAdmin();
         address protocolFeeReceiver = address(0);
 
         vm.prank(msgSender);
@@ -805,7 +799,7 @@ contract BrrETHTest is Helper {
     }
 
     function testSetProtocolFeeReceiver() external {
-        address msgSender = vault.owner();
+        address msgSender = _getVaultProxyAdmin();
         address protocolFeeReceiver = address(0xbeef);
 
         assertTrue(protocolFeeReceiver != vault.protocolFeeReceiver());
@@ -828,10 +822,10 @@ contract BrrETHTest is Helper {
         address msgSender = address(0);
         address feeDistributor = address(0xbeef);
 
-        assertTrue(msgSender != vault.owner());
+        assertTrue(msgSender != _getVaultProxyAdmin());
 
         vm.prank(msgSender);
-        vm.expectRevert(Ownable.Unauthorized.selector);
+        vm.expectRevert(ERC1967Factory.Unauthorized.selector);
 
         vault.setFeeDistributor(feeDistributor);
     }
@@ -856,22 +850,6 @@ contract BrrETHTest is Helper {
         vault.setFeeDistributor(feeDistributor);
 
         assertEq(feeDistributor, vault.feeDistributor());
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                    Removed Ownable methods
-    //////////////////////////////////////////////////////////////*/
-
-    function testCannotTransferOwnershipRemovedOwnableMethod() external {
-        vm.expectRevert(BrrETH.RemovedOwnableMethod.selector);
-
-        vault.transferOwnership(address(0));
-    }
-
-    function testCannotRenounceOwnershipRemovedOwnableMethod() external {
-        vm.expectRevert(BrrETH.RemovedOwnableMethod.selector);
-
-        vault.renounceOwnership();
     }
 
     /*//////////////////////////////////////////////////////////////
