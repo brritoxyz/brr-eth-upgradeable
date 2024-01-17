@@ -33,7 +33,7 @@ contract BrrETH is UUPSUpgradeable, Initializable, ERC4626 {
     // The router used to swap rewards for WETH.
     IRouter public router;
 
-    // The default reward fee is 0% and can be increased up to 100% (unlikely to ever be that high).
+    // The default reward fee is 0% and can be increased up to 100% (only for specific use cases).
     uint256 public rewardFee;
 
     // Receives the protocol's share of reward fees.
