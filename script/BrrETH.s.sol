@@ -11,7 +11,7 @@ contract BrrETHScript is Script {
     address private constant _BURN_ADDRESS =
         0x000000000000000000000000000000000000dEaD;
     address private constant _ROUTER =
-        0xafaE5a94e6F1C79D40F5460c47589BAD5c123B9c;
+        0xe88483B5901FA3537355C4324ccF92a8d4155260;
     address private constant _COMET =
         0x46e6b214b524310239732D51387075E0e70970bf;
     address private constant _COMET_REWARDS =
