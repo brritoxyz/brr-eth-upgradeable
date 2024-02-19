@@ -61,12 +61,11 @@ contract BrrETHTest is Helper {
     {
         uint256 rewardFee = vault.rewardFee();
         uint256 rewardFeeShare = amount.mulDiv(rewardFee, _FEE_BASE);
-        uint256 preFeeAmount = amount.mulDiv(_FEE_BASE, _SWAP_FEE_DEDUCTED);
+        uint256 preFeeAmount = amount.mulDiv(_FEE_BASE, swapFeeDeducted);
         protocolFeeReceiverShare = rewardFeeShare / 2;
         feeDistributorShare = rewardFeeShare - protocolFeeReceiverShare;
         feeDistributorSwapFeeShare =
-            (preFeeAmount -
-                preFeeAmount.mulDiv(_SWAP_FEE_DEDUCTED, _FEE_BASE)) /
+            (preFeeAmount - preFeeAmount.mulDiv(swapFeeDeducted, _FEE_BASE)) /
             2;
     }
 
@@ -455,7 +454,7 @@ contract BrrETHTest is Helper {
                 protocolFeeReceiverShare +
                 feeDistributorShare +
                 feeDistributorSwapFeeShare,
-            _WETH.balanceOf(_getVaultProxyAdmin())
+            _WETH.balanceOf(vault.protocolFeeReceiver())
         );
     }
 

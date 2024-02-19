@@ -15,4 +15,6 @@ interface IRouter {
         bytes32 pair,
         uint256 input
     ) external view returns (uint256 index, uint256 output);
+
+    function feeDeducted() external view returns (uint256);
 }

@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 import {ICometRewards} from "src/interfaces/ICometRewards.sol";
+import {IRouter} from "src/interfaces/IRouter.sol";
 import {BrrETH} from "src/BrrETH.sol";
 
 contract Helper is Test {
@@ -23,12 +24,12 @@ contract Helper is Test {
     address internal constant _COMET_REWARDS =
         0x123964802e6ABabBE1Bc9547D72Ef1B69B00A6b1;
     uint256 internal constant _FEE_BASE = 10_000;
-    uint256 internal constant _SWAP_FEE_DEDUCTED = 9_998;
     uint256 internal constant _COMET_ROUNDING_ERROR_MARGIN = 2;
     uint256 internal constant _INITIAL_REWARD_FEE = 1_000;
     address public immutable admin = address(this);
     address public immutable vaultImplementation = address(new BrrETH());
     BrrETH public immutable vault;
+    uint256 public immutable swapFeeDeducted;
 
     constructor() {
         vault = BrrETH(
@@ -45,6 +46,7 @@ contract Helper is Test {
                 )
             )
         );
+        swapFeeDeducted = IRouter(_ROUTER).feeDeducted();
     }
 
     /**
